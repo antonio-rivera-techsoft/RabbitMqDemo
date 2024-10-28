@@ -25,7 +25,6 @@ namespace Producer
                 Port = port,
                 ClientProvidedName = clientName
             };
-            var pruebaUri = factory.Uri;
 
             //Opcion 2
             //ConnectionFactory factory = new();
@@ -48,6 +47,7 @@ namespace Producer
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
+                //La siguiente declaracion y bindeo se puede hacer en codigo pero deberi hacerse por RabbitMq management
                 //Declaración de exchange y cola
                 channel.ExchangeDeclare(exchangeName, ExchangeType.Direct, true, false);
                 channel.QueueDeclare(queueName, true, false, false, null);
