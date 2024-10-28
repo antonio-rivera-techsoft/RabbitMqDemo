@@ -8,24 +8,53 @@ namespace Consumer2
     {
         static void Main(string[] args)
         {
-            var factory = new ConnectionFactory() { HostName = "localhost" };
+            string userName = "guest";
+            string password = "guest";
+            string host = "localhost";
+            int port = 5672;
+            string clientName = "Sincronizador Sucursal #2";
+
+            ConnectionFactory factory = new()
+            {
+                UserName = userName,
+                Password = password,
+                HostName = host,
+                Port = port,
+                ClientProvidedName = clientName
+            };
+
+            string exchangeName = "DemoExchange";
+            string routingKey = "routing-key";
+            string queueName = "DemoQueue";
+
             using (var connection = factory.CreateConnection())
             using (var channel = connection.CreateModel())
             {
-                channel.QueueDeclare(queue: "DemoQueue", durable: false, exclusive: false, autoDelete: false, arguments: null);
+                channel.ExchangeDeclare(exchangeName, ExchangeType.Direct, true, false);
+                channel.QueueDeclare(queueName, true, false, false, null);
+                channel.QueueBind(queueName, exchangeName, routingKey, null);
 
-                var consumer = new EventingBasicConsumer(channel);
+                channel.BasicQos(0, 1, false);
+                EventingBasicConsumer consumer = new(channel);
                 consumer.Received += (model, ea) =>
                 {
-                    Task.Delay(5000).Wait();
-                    var body = ea.Body.ToArray();
-                    var message = Encoding.UTF8.GetString(body);
-                    Console.WriteLine("Message Received: ", message);
-                    channel.BasicAck(ea.DeliveryTag, false);
-                };
-                channel.BasicConsume(queue: "DemoQueue", autoAck: true, consumer: consumer);
+                    try 
+                    {
+                        var body = ea.Body.ToArray();
+                        var message = Encoding.UTF8.GetString(body);
+                        Console.WriteLine($"Message Received: {message}");
+                        Task.Delay(3000).Wait();
 
+                        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                };
+                string consumerTag = channel.BasicConsume(queueName, false, consumer);
                 Console.ReadLine();
+                channel.BasicCancel(consumerTag);
             }
         }
     }
